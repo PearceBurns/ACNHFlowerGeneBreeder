@@ -1,6 +1,17 @@
 import csv
 
 class Flower(object):
+    """This is a class of 5 input variables, and 4 internal variables;
+     Inputs: A flower name, ideally taken from 'flowerList',
+     Numbers of R,Y,W, and B dominent genes in the flowers gene code
+
+     Internals:
+     flowerName; as flower name is inputted
+     Gene Numbers; internal numbers based on inputs of R,Y,W,B. Used for Punnett Square calculations
+     GeneCode; Manifestation of the Gene numbers in letter format. Used often to categorise the flowers and search for other properties, such as colour.
+     Colour; The colour of the flower, which is a property we can see as a manifestation of the gene code in the flower type. Used as a primary test for unique genes.
+
+     """
     def __init__(self,flowerName ,redGene, yellowGene, whiteGene, blueGene = 0 ):
         self.flowerName = flowerName
         self.GeneNumbers = [redGene, yellowGene, whiteGene, blueGene]
@@ -8,6 +19,12 @@ class Flower(object):
         self.colour = FlowerGeneColour[self.flowerName][self.GeneCode]
 
 def geneCodeTranslator(red,yellow,white,blue):
+    #Takes in the number of dominient R,Y,W,B genes and outputs a gene code. e.g. an input 0,2,1,0 gives a code rrYYWwbb
+    #Primarily used to initialise the flower class
+    """
+    :param red, yellow, white, blue: Gene Number inputs, taken from flower initialisations and otherwise used to generate Punnett squares
+    :return: An 8 letter gene code, consisting of 4 pairs of letters from R,r;Y,y;W,w;B,b. Possibilities for each pair is xx, Xx, XX.
+    """
     output = ""
     for R in range(2):
         if R < red:
@@ -29,16 +46,23 @@ def geneCodeTranslator(red,yellow,white,blue):
             output += "B"
         else:
             output += "b"
-    return output
+    return output #
 
-def unique(inList):
+def unique(inList): #takes a list and outputs a list of each unique element from that list. The fact this is not a built-in list function baffles me. This is used in the breed function. Could possibly be replaced by implementing a dictionary in Breed instead.
     outList = []
     for item in inList:
         if item not in outList:
             outList.append(item)
     return outList
 
-def breed(flower_1, flower_2):
+def breed(flower_1, flower_2): #Takes two flower classes, and outputs all possible children of those two flowers.
+    #the output is a dictionary of the form: {child_flower : {"Probability" (of this child): n% , "Parents" (of this child): [ParentA, ParentB]}
+    """
+    :param flower_1, flower_2: parent flowers, from which we want to find all possible children flowers
+    :return: A dictionary of all possible children flowers in the format:
+    {child_flower: {Probability: n%, Parents: [ParentA, ParentB]}}
+    This is achieved using the Punnett Square Function
+    """
     childflowers = {}
     if flower_1.flowerName == flower_2.flowerName:
         newFlowerGenes = []
@@ -67,7 +91,12 @@ def breed(flower_1, flower_2):
 
     return childflowers
 
-def punnettSquare(GeneNumber_1, GeneNumber_2):
+def punnettSquare(GeneNumber_1, GeneNumber_2): #Takes gene numbering for one breeding pair of genes (e.g. Rr x Rr) and outputs all the possible combinations of gene numberings. Used in breed(x,y) to get child gene numbers.
+    """
+    :param GeneNumber_1, GeneNumber_2: Gene numbers for one Gene from 2 parent flowers
+    :return: A list(/matrix) of 4 possible children, duplicates included
+    This works as a reference table, (could be a dictionary if I tried hard enough?)
+    """
     output = []
     if GeneNumber_1 == 0:
         if GeneNumber_2 == 0:
@@ -91,9 +120,15 @@ def punnettSquare(GeneNumber_1, GeneNumber_2):
         elif GeneNumber_1 == 2:
             output = [2,2,2,2]
 
-    return output
+    return output #
 
-def IdentifyFlowersFromBreed(breed_list):
+def IdentifyFlowersFromBreed(breed_list): # Takes output from breed(x,y) and outputs flowers we can identify directly because it is a unique geneome with a unique colour, and also groups the flowers we cannot identify because multiple genomes share a colour.
+    #e.g. If a white x white flower combo gives one pink flower and 2 white flowers, then the output will be like [ [pink_flower], [[white_flowers, "White"]]]
+    """
+    :param breed_list: Breed list is provided by the breed function. it is a dictionary of the form: {child_flower: {Probability: n%, Parents: [ParentA, ParentB]}}
+    :return: [[successful flowers], [[failed flowers], colour the failed flowers share]]
+        e.g. [[successfully identified green flower],[successfully identified pink flower]],[[[unidentified purple flowers],purple],[[unidentified blue flowers],blue]]
+    """
     output = []
     successList = []
     allfails = []
@@ -121,7 +156,15 @@ def IdentifyFlowersFromBreed(breed_list):
     output = [successList, failedOutput]
     return output
 
-def calculateTest(test):
+def calculateTest(test): #Takes a [known_flower]x[unknown_flowers] test, and compares the children. It outputs all children which produce unique colours from this test and associates it with its unknown parent.
+    #This way, a unknown flower can be immediately identified when it produces one of these coloured children.
+    """
+    :param test: {unidentified flowers : {Potential colours : {Flowers : [flowers of this colour], Probability: n% probability of getting this colour} }
+    :return: {unidentified flowers : {UNIQUE colours : {Flowers : [flowers of this colour], Probability: n% probability of getting this colour} }
+
+    The Goal of this function is to compare the colour tables of the input dictionaries and remove any colour shared by more than one flower.
+    This gives a list of children whos occurence in a Gene test tell us the unidentified flower is of a specific geneome.
+    """
     AllColours = []
     TestOutputs = {}
     for testChild in test:
@@ -143,26 +186,46 @@ def calculateTest(test):
             TestOutputs[testChild][colour] = {}
         for colour in UniqueChildColours:
             TestOutputs[testChild][colour] = test[testChild][colour]
-    return TestOutputs #rewrite to take a dictionary input and prodce a dictionary of successful result colours
+    return TestOutputs
 
-def IsFlowerNotDiscovered(testFlower, knownFlowerList):
-    output = True
+def IsFlowerNotDiscovered(testFlower, knownFlowerList): #Takes a flower and the list of geneomed flowers and tells you whether the flower has been previously discovered. Saves on duplicate entries.
+    """
+    :param testFlower: A flower object to compare to entries in knownFlowerList
+    :param knownFlowerList: A list of Flowers with known genetic make up
+    :return: A boolean saying whether testFlower, or an identically gened flower, is in knownFlowerList, since different instances of flower objects with the same internal parameters are not identical.
+    """
+
+    output = False
+    if len(knownFlowerList) > 0:
+        output = True
+
     for flowerX in knownFlowerList:
         if (testFlower.GeneCode == flowerX.GeneCode) and (testFlower.flowerName == flowerX.flowerName):
             output = False
 
     return output
 
-def IsGroupingBreedAndNotGenomed(testGroup, UnGeneFlowerPool):
-    output = False
-    for grouping in UnGeneFlowerPool:
-        if ((testGroup[2].flowerName == grouping[2].flowerName) and
-            (grouping[2].GeneCode == testGroup[2].GeneCode) and (grouping[3].GeneCode == testGroup[3].GeneCode)):
-            output = True
+def IdentifyUngenedFlowers(ungenedFlowers, IdentifiedFlowers): #A repeatable function that takes in groups of ungened flowers, and performs gene tests on the group to see if there are any ways to identify them.
+    #Ungened flowers is a list of dictionaries, Identified flowers is the dictionary of potential additions to the list of geneomed flowers.
+    """
+    :param ungenedFlowers: Takes a list of dictionaries, with each dictionary being a test group of similar colour but different genes.
+    :param IdentifiedFlowers: An output vector which is a dictionary of all flowers which have possible ID methods on this iteration of the program. Formatted:
+    IdentifiedFlowers[geneTest.flowerName][geneTest.GeneCode][geneTest]["Test Flower"][test]["Colours"] = [colour for colour in interpretResults[geneTest]]
+    {Flower Name: {Gene Code: {Individual Flower objects:
+    {"probability": n%, "Parents": [ParentA, ParentB], "ID": "Unique Genome/ Colour/ Gene Test",
+     "Test Flower": { Test Partner Flower Object: {"Colours": [Successful-test colours] , "Probability" : n% propability of a successful test}}}}}
+    :return: None
 
-    return output
+    This function breeds every flower on the known flower list with unknown flowers. It then looks for uniquely coloured flowers which occur for any one flower
+    so it can be identified when that colour occurs in testing. It then appends these findings to the IdentifiedFlowers list
 
-def IdentifyUngenedFlowers(ungenedFlowers, IdentifiedFlowers):
+    Note: This function draws a lot of computing power for large Known Flower List sizes. Optimisaton should be focused here.
+    Also: We might want to adjust the method of this function to allow deductive reasoning on failed tests, but this deductive logic is annoying to think about.
+
+    E.g. If two white roses breed to give three different white roses, and one is ID'ed by a successful gene test,
+    if the test is negative then it should imply it is one of the other two white flowers.
+    Hopefully we can find a test with these two that identifies them.
+    """
     for unidentifiedPool in ungenedFlowers:
         testResults = {}
         for flowerB in UpdatedFlowerPool:
@@ -220,8 +283,23 @@ def IdentifyUngenedFlowers(ungenedFlowers, IdentifiedFlowers):
                     IdentifiedFlowers[geneTest.flowerName][geneTest.GeneCode][geneTest]["Test Flower"][test] = {}
                     IdentifiedFlowers[geneTest.flowerName][geneTest.GeneCode][geneTest]["Test Flower"][test]["Probability"] = TestSuccessProbability
                     IdentifiedFlowers[geneTest.flowerName][geneTest.GeneCode][geneTest]["Test Flower"][test]["Colours"] = [colour for colour in interpretResults[geneTest]]
+    ungenedFlowers = []
 
 def BreedNewFlowers(UpdatedFlowerPool, IdentifiedFlowers):
+    """
+    :param UpdatedFlowerPool: A list of all known flowers in the form of flower objects
+    :param IdentifiedFlowers: a dictionary of all flowers that can be identified on this iteration of the process. Intended as an output file to append new entries to in this function
+    :return: None
+
+
+    Identified flowers looks like: {Flower Name: {Gene Code: {Individual Flower objects:
+    {"probability": n%, "Parents": [ParentA, ParentB], "ID": "Unique Genome/ Colour/ Gene Test",
+     "Test Flower": { Test Partner Flower Object: {"Colours": [Successful-test colours] , "Probability" : n% propability of a successful test}}}}}
+
+    Takes the list of all known-gene flowers, breeds them together. Any that can be identified immediately are appended to the dictionary Identify flowers,
+    the flowers that cannot be identified immediately are appended to the list UngenedflowerPool,
+     as a dictionary each failed colour, the flowers which occur in that colour, and the probability of getting each (flower/colour?)
+    """
     for flowerA in UpdatedFlowerPool:
         for flowerB in UpdatedFlowerPool[UpdatedFlowerPool.index(flowerA):]:
             newFlowerPool = breed(flowerA, flowerB)
@@ -257,20 +335,29 @@ def BreedNewFlowers(UpdatedFlowerPool, IdentifiedFlowers):
                     UngenedflowerPool.append(failedDictionary)
 
 def SaveFlowers(UpdatedFlowerPool, IdentifiedFlowers):
-    #for flower in IdentifiedFlowers:
-        #if IsFlowerNotDiscovered(flower, UpdatedFlowerPool):
-        #    UpdatedFlowerPool.append(flower)
-            #print(flower.colour + " " + flower.flowerName + " " + flower.GeneCode)
-     newFlowers = False
-     for flowerName in IdentifiedFlowers:
+    """
+    :param UpdatedFlowerPool: The list of all known flowers. Used both as an output file to append entries too, and a comparison point so no duplicate entries are attempted.
+
+    :param IdentifiedFlowers: The dictionary of all flowers which we can identify on this iteration of the program.
+     Identified flowers looks like: {Flower Name: {Gene Code: {Individual Flower objects:
+    {"probability": n%, "Parents": [ParentA, ParentB], "ID": "Unique Genome/ Colour/ Gene Test",
+     "Test Flower": { Test Partner Flower Object: {"Colours": [Successful-test colours] , "Probability" : n% propability of a successful test}}}}}
+
+    :return: A boolean on whether a new flower was added to the known flower pool.
+
+    Takes the flowers we can identify, and finds the best parent combo to use to find said flower. This should prioritise breeding pairs that directly breed the desired flower
+     over any that need to be gene IDed.
+    It also prints in text the appropriate parent combo, with some probabilities and how to test for said flower.
+    """
+    output = False
+    for flowerName in IdentifiedFlowers:
          for Gene in IdentifiedFlowers[flowerName]:
-             flowerToSave = None
+             flowerToSave = "Dummy"
              NeedsIDed = True
              maxProb = 0.0
              maxIDProb = 0.0
-             IDFlower = None
+             IDFlower = ""
              AdditionalReason = ""
-             output = False
              for flower in IdentifiedFlowers[flowerName][Gene]:
                 if IsFlowerNotDiscovered(flower, UpdatedFlowerPool):
                     output = True
@@ -297,8 +384,8 @@ def SaveFlowers(UpdatedFlowerPool, IdentifiedFlowers):
                         if IdentifiedFlowers[flowerName][Gene][flower]["Probability"] > maxProb: #If the new flower is easier to breed, the new flower is our new target
                             maxProb = IdentifiedFlowers[flowerName][Gene][flower]["Probability"]
                             flowerToSave = flower
-             if(output):
-                 if NeedsIDed:
+             if(flowerToSave != "Dummy"):
+                 if NeedsIDed and IDFlower != "":
                      AdditionalReason = "This flower is successfully Identified by breeding it with a " + IDFlower.colour + " "\
                      + IDFlower.flowerName + " (" + IDFlower.GeneCode + ") and getting children of the following colours: "\
                      + ", ".join(map(str,IdentifiedFlowers[flowerName][Gene][flowerToSave]["Test Flower"][IDFlower]["Colours"])) \
@@ -313,12 +400,14 @@ def SaveFlowers(UpdatedFlowerPool, IdentifiedFlowers):
                  + " chance of being bred. It can be identified by "
                  +   IdentifiedFlowers[flowerName][Gene][flowerToSave]["ID"] + ". " + AdditionalReason   )
                  UpdatedFlowerPool.append(flowerToSave)
-     return output
+    return output
 
-
-
-
-def CalculateColourProbabilities(BreedList):
+def CalculateColourProbabilities(BreedList): #Takes in the output from breed(x,y) and outputs the probability of breeding each colour of flower available in that breeding pool
+    """
+    Takes a breed list from breed(flowerA, flowerB)
+    :param BreedList:
+    :return:
+    """
     colours = []
     totals = []
     output = {}
@@ -333,17 +422,17 @@ def CalculateColourProbabilities(BreedList):
         output[colours[entryIndex]] = totals[entryIndex]
     return output
 
-GeneList = []
+GeneList = [] #Initialise all possible Gene Codes e.g. rryywwbb, RRYyWwbb, etc.
 
-for b in range(3):
+for b in range(3): #Sets up all Possible gene codes for reference
     for r in range(3):
         for y in range(3):
            for w in range(3):
-               GeneList.append(geneCodeTranslator(r,y,w,b))
+               GeneList.append(geneCodeTranslator(r,y,w,b)) # # ##
 
-flowerList = ["Cosmo", "Hyacinth", "Lilly", "Mum", "Pansie", "Rose", "Tulip", "Windflower"]
+flowerList = ["Cosmo", "Hyacinth", "Lilly", "Mum", "Pansie", "Rose", "Tulip", "Windflower"] #All flowers
 
-Colours = ["White", "Pink", "Red", "Orange", "Yellow", "Green", "Blue",  "Purple", "Black"]
+Colours = ["White", "Pink", "Red", "Orange", "Yellow", "Green", "Blue",  "Purple", "Black"] #ll colours
 
 FlowerGeneColour = {flowerList[0]: {GeneList[0]: Colours[0],
                                      GeneList[1]: Colours[0],
@@ -616,7 +705,7 @@ FlowerGeneColour = {flowerList[0]: {GeneList[0]: Colours[0],
                                     GeneList[24]: Colours[1],
                                     GeneList[25]: Colours[1],
                                     GeneList[26]: Colours[7]},
-                    }
+                    } #A dictionary of all flowers, with their gene code and corresponding colour.
 
 initialflowerPool = [
     Flower(flowerList[0],0,0,1),
@@ -655,20 +744,21 @@ newFlowerPool = []
 generation = 0
 print(len(UpdatedFlowerPool))
 while (newFlowers):
-    print(generation)
+    print(generation) #The generation is more a curiousity/debugging tool.
     generation += 1
-#if (newFlowers):
     IdentifiedFlowers = {}
     for flower in flowerList:
-        IdentifiedFlowers[flower] = {}
-
+        IdentifiedFlowers[flower] = {} #Initialises a dictionary of all the flower names so we can search through them properly
 
 
     BreedNewFlowers(UpdatedFlowerPool, IdentifiedFlowers)
-    IdentifyUngenedFlowers(UngenedflowerPool, IdentifiedFlowers)
+    if len(IdentifiedFlowers) == 0:
+        IdentifyUngenedFlowers(UngenedflowerPool, IdentifiedFlowers)
 
     newFlowers = SaveFlowers(UpdatedFlowerPool, IdentifiedFlowers)
-
+    if not newFlowers:
+        IdentifyUngenedFlowers(UngenedflowerPool, IdentifiedFlowers)
+        newFlowers = SaveFlowers(UpdatedFlowerPool, IdentifiedFlowers)
 print(len(UpdatedFlowerPool))
 
 listOfAllFlowers = []
